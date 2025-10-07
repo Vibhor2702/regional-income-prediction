@@ -1,0 +1,13 @@
+name = "regional-income-api"
+main = "worker.ts"
+compatibility_date = "2024-10-01"
+
+[build]
+command = "npm install && npm run build"
+
+[env.production]
+vars = { ENVIRONMENT = "production" }
+
+[[routes]]
+pattern = "*/api/*"
+zone_name = "your-domain.com"
