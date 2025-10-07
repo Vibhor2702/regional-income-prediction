@@ -1,434 +1,141 @@
-# 💰 Regional Income Prediction
+# 🏘️ Regional Income Prediction
 
-A complete machine learning project that predicts average Adjusted Gross Income (AGI) for U.S. regions using IRS tax data and U.S. Census socio-economic indicators.
+Machine learning model predicting average adjusted gross income (AGI) for U.S. regions using IRS tax data and Census socio-economic indicators.
 
 ![Python](https://img.shields.io/badge/python-3.11-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
-![Status](https://img.shields.io/badge/status-production-success.svg)
+![Deployed](https://img.shields.io/badge/deployed-cloudflare-orange.svg)
+
+## 🚀 Live Demo
+
+**Web App**: https://regional-income-prediction.pages.dev
 
 ## 🎯 Project Overview
 
-This project provides an end-to-end machine learning pipeline for predicting regional income levels, featuring:
+End-to-end machine learning pipeline with modern web interface:
 
-- **Data Ingestion**: Automated collection from IRS SOI and Census API
-- **Feature Engineering**: 30+ derived features with spatial analysis
-- **Multiple ML Models**: Linear, Random Forest, XGBoost, LightGBM
-- **Hyperparameter Tuning**: Optuna-based optimization
-- **Model Interpretation**: SHAP values and permutation importance
-- **Interactive Dashboard**: Streamlit web application
-- **Production Ready**: Dockerized deployment
+- **ML Pipeline**: XGBoost model with 94.5% accuracy (R² = 0.9455)
+- **Dataset**: 27,680 ZIP codes from IRS SOI Tax Statistics (2015)
+- **Web App**: Next.js frontend with Cloudflare Pages Functions API
+- **Features**: 22 engineered features including demographics and tax data
+- **Deployment**: Serverless architecture on Cloudflare Edge Network
 
-## 🧱 Tech Stack
+## 🛠️ Technology Stack
 
-| Category | Technologies |
-|----------|-------------|
-| **Language** | Python 3.11 |
-| **Data Handling** | pandas, numpy, geopandas |
-| **Visualization** | matplotlib, seaborn, plotly, folium |
-| **ML Framework** | scikit-learn, xgboost, lightgbm, optuna, shap |
-| **Dashboard** | streamlit, pydeck |
-| **APIs** | requests, censusdata |
-| **Deployment** | Docker, Conda |
+### Machine Learning
+- **Python 3.11**, pandas, numpy
+- **XGBoost** & **LightGBM** for ensemble models
+- **scikit-learn** for preprocessing and evaluation
 
-## 📦 Data Sources
+### Web Application
+- **Frontend**: Next.js 14, React 18, TypeScript, Tailwind CSS
+- **Backend**: Cloudflare Pages Functions (serverless)
+- **Icons**: Lucide React
+- **Deployment**: Cloudflare Pages with automatic HTTPS
 
-1. **IRS SOI Individual Income Tax Statistics**
-   - ZIP and County level tax data
-   - Target: Average AGI per return
+## � Model Performance
 
-2. **U.S. Census ACS 5-year Estimates**
-   - Demographic and socio-economic indicators
-   - Income, education, employment, housing data
+- **Algorithm**: XGBoost Regressor
+- **Accuracy**: 94.5% (R² = 0.9455)
+- **MAE**: $3,591
+- **RMSE**: $6,034
+- **Dataset**: 27,680 ZIP codes
 
-3. **HUD ZIP-County Crosswalk**
-   - Geographic mapping between ZIP codes and counties
+## 🎯 Available Test ZIP Codes
 
-4. **TIGER/Line Shapefiles**
-   - Geographic boundaries for visualization
+- `10001` - New York, NY ($85K median)
+- `90001` - Los Angeles, CA ($45K median)
+- `60601` - Chicago, IL ($70K median)
+- `77001` - Houston, TX ($62K median)
+- `33109` - Miami Beach, FL ($95K median)
+- `94027` - Atherton, CA ($150K median)
 
-## 🚀 Quick Start
+## 🚀 Local Development
 
-### Prerequisites
-
-- Python 3.11+
-- Census API Key ([Get one here](https://api.census.gov/data/key_signup.html))
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/regional-income-prediction.git
-   cd regional-income-prediction
-   ```
-
-2. **Create and activate virtual environment**
-   ```bash
-   # Using conda (recommended)
-   conda create -n income-pred python=3.11
-   conda activate income-pred
-   
-   # Or using venv
-   python -m venv venv
-   # Windows
-   venv\Scripts\activate
-   # Unix/MacOS
-   source venv/bin/activate
-   ```
-
-3. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Configure environment**
-   ```bash
-   cp .env.example .env
-   # Edit .env and add your Census API key
-   ```
-
-### Running the Pipeline
-
-#### Option 1: Using Makefile (Recommended)
-
+### ML Pipeline
 ```bash
-# Prepare data
-make prepare
+# Install dependencies
+pip install -r requirements.txt
 
-# Train models
-make train
-
-# Generate interpretation reports
-make interpret
-
-# Launch dashboard
-make dashboard
+# Run the pipeline
+python src/data_preprocessing.py
+python src/feature_engineering.py
+python src/model_training.py
+python src/model_evaluation.py
 ```
 
-#### Option 2: Manual Execution
-
+### Web Application
 ```bash
-# 1. Data ingestion
-python src/data_ingest.py
-
-# 2. Feature engineering
-python src/features.py
-
-# 3. Model training
-python src/modeling.py
-
-# 4. Model interpretation
-python src/interpret.py
-
-# 5. Launch dashboard
-streamlit run app/streamlit_app.py
+cd web
+npm install --legacy-peer-deps
+npm run dev           # Development server
+npm run build         # Production build
 ```
 
-### Using Docker
+## 🎨 API Usage
 
+### Make a Prediction
 ```bash
-# Build image
-make docker-build
+curl -X POST https://regional-income-prediction.pages.dev/api/predict \
+  -H "Content-Type: application/json" \
+  -d '{"zipCode": "10001"}'
+```
 
-# Run container
-make docker-run
-
-# Access dashboard at http://localhost:8501
+### Response
+```json
+{
+  "zipCode": "10001",
+  "state": "NY",
+  "predictedIncome": 87234,
+  "confidence": 0.92,
+  "medianIncome": 85000,
+  "population": 21000,
+  "metadata": {
+    "model": "XGBoost",
+    "version": "1.0.0"
+  }
+}
 ```
 
 ## 📁 Project Structure
 
 ```
 regional-income-prediction/
-├── app/
-│   └── streamlit_app.py          # Interactive dashboard
-├── data_raw/                      # Raw data (not in git)
-│   ├── irs/                       # IRS tax data
-│   ├── census/                    # Census ACS data
-│   └── shapefiles/                # Geographic boundaries
-├── data_processed/                # Processed data (not in git)
-│   └── merged.parquet             # Final merged dataset
-├── models/                        # Trained models (not in git)
-│   ├── best_model.joblib          # Best performing model
-│   └── feature_pipeline.joblib    # Preprocessing pipeline
-├── notebooks/                     # Jupyter notebooks
-│   └── 01_exploratory_analysis.ipynb
-├── reports/                       # Generated reports
-│   └── feature_importance/        # SHAP & importance plots
-├── src/                           # Source code
-│   ├── config.py                  # Configuration settings
-│   ├── logger.py                  # Logging setup
-│   ├── helpers.py                 # Utility functions
-│   ├── data_ingest.py             # Data collection
-│   ├── features.py                # Feature engineering
-│   ├── modeling.py                # Model training
-│   └── interpret.py               # Model interpretation
-├── tests/                         # Unit tests
-│   ├── test_data_ingest.py
-│   ├── test_features.py
-│   └── test_modeling.py
-├── .env.example                   # Environment variables template
-├── .gitignore                     # Git ignore rules
-├── Dockerfile                     # Docker configuration
-├── Makefile                       # Build automation
-├── README.md                      # This file
-└── requirements.txt               # Python dependencies
+├── src/                          # ML pipeline
+│   ├── data_preprocessing.py
+│   ├── feature_engineering.py
+│   ├── model_training.py
+│   └── model_evaluation.py
+├── web/                          # Next.js frontend
+│   ├── app/                      # App router pages
+│   ├── functions/                # API endpoints
+│   │   └── api/
+│   │       ├── predict.ts        # Prediction endpoint
+│   │       └── health.ts         # Health check
+│   └── package.json
+├── models/                       # Trained models (not in git)
+├── reports/                      # Visualization charts
+└── README.md
 ```
 
-## 🧩 Pipeline Components
+## 🔄 Deployment
 
-### 1. Data Ingestion (`data_ingest.py`)
-
-Downloads and merges data from multiple sources:
-
-```python
-from src.data_ingest import DataIngester
-
-ingester = DataIngester()
-merged_data = ingester.run_full_pipeline()
-```
-
-**Key Features:**
-- Automated IRS data download
-- Census API integration
-- HUD crosswalk processing
-- TIGER/Line shapefile loading
-- Data validation and cleaning
-
-### 2. Feature Engineering (`features.py`)
-
-Creates derived features and preprocessing pipeline:
-
-```python
-from src.features import FeatureEngineer
-
-engineer = FeatureEngineer()
-X, y, pipeline = engineer.prepare_features()
-```
-
-**Derived Features:**
-- Unemployment rate
-- Poverty rate
-- Education rate (college+)
-- Housing ownership rate
-- Income ratios and log transforms
-- Spatial lag features (optional)
-
-### 3. Model Training (`modeling.py`)
-
-Trains and evaluates multiple models:
-
-```python
-from src.modeling import ModelTrainer
-
-trainer = ModelTrainer(X, y)
-trainer.split_data()
-trainer.train_all_models(tune_hyperparameters=True)
-trainer.save_best_model()
-```
-
-**Models Implemented:**
-- Linear Regression (baseline)
-- Random Forest Regressor
-- XGBoost Regressor
-- LightGBM Regressor
-
-**Evaluation Metrics:**
-- MAE (Mean Absolute Error)
-- RMSE (Root Mean Squared Error)
-- R² (Coefficient of Determination)
-- MAPE (Mean Absolute Percentage Error)
-
-### 4. Model Interpretation (`interpret.py`)
-
-Generates feature importance visualizations:
-
-```python
-from src.interpret import ModelInterpreter
-
-interpreter = ModelInterpreter()
-interpreter.generate_all_reports()
-```
-
-**Outputs:**
-- SHAP summary plots
-- SHAP dependence plots
-- Permutation importance
-- Feature ranking
-
-### 5. Dashboard (`streamlit_app.py`)
-
-Interactive web application with:
-
-- **Single Prediction**: Manual data entry form
-- **Batch Predictions**: CSV upload
-- **What-If Analysis**: Interactive sliders
-- **Feature Importance**: Visual rankings
-- **Geographic View**: Choropleth maps
-- **Model Performance**: Metrics comparison
-
-## 📊 Features
-
-### Census ACS Variables Used
-
-| Variable | Description |
-|----------|-------------|
-| `median_household_income` | Median household income |
-| `per_capita_income` | Per capita income |
-| `total_population` | Total population |
-| `total_households` | Number of households |
-| `avg_household_size` | Average household size |
-| `median_age` | Median age of residents |
-| `unemployment_rate` | Unemployment rate |
-| `poverty_rate` | Poverty rate |
-| `education_rate` | % with bachelor's degree or higher |
-| `median_home_value` | Median home value |
-| `median_gross_rent` | Median monthly rent |
-| `owner_occupied_rate` | % owner-occupied housing |
-
-### Model Performance Example
-
-| Model | MAE | RMSE | R² | MAPE |
-|-------|-----|------|----|----|
-| **LightGBM** | $3,245 | $4,821 | 0.912 | 8.2% |
-| XGBoost | $3,512 | $5,134 | 0.898 | 9.1% |
-| Random Forest | $3,789 | $5,445 | 0.883 | 9.8% |
-| Linear Regression | $5,234 | $7,892 | 0.743 | 14.5% |
-
-*Note: Actual results will vary based on data quality and hyperparameter tuning.*
-
-## 🧪 Testing
-
-Run unit tests:
+Automatically deployed to Cloudflare Pages on every push to main:
 
 ```bash
-# Run all tests
-make test
-
-# Run with coverage
-pytest tests/ --cov=src --cov-report=html
-
-# View coverage report
-open htmlcov/index.html
+cd web
+npm run build
+npx wrangler pages deploy out --project-name regional-income-prediction
 ```
 
-## 📝 Development
+## � License
 
-### Code Style
+MIT License
 
-This project follows PEP 8 style guidelines:
+## 👤 Author
 
-```bash
-# Format code
-black src/ app/ tests/
-
-# Lint code
-flake8 src/ app/ tests/
-```
-
-### Adding New Features
-
-1. Create feature branch
-2. Implement changes with docstrings
-3. Add unit tests
-4. Update documentation
-5. Submit pull request
-
-## 🐳 Deployment
-
-### Streamlit Cloud
-
-1. Push code to GitHub
-2. Connect repository to [Streamlit Cloud](https://streamlit.io/cloud)
-3. Configure secrets (Census API key)
-4. Deploy
-
-### Docker
-
-```bash
-# Build
-docker build -t regional-income-prediction:latest .
-
-# Run
-docker run -p 8501:8501 \
-  -v $(pwd)/data_processed:/app/data_processed \
-  -v $(pwd)/models:/app/models \
-  regional-income-prediction:latest
-```
-
-### Custom Server
-
-```bash
-# Install production server
-pip install gunicorn
-
-# Run with gunicorn
-gunicorn -w 4 -b 0.0.0.0:8000 app:app
-```
-
-## 📈 Model Interpretation
-
-The project uses SHAP (SHapley Additive exPlanations) for model interpretation:
-
-- **Global Importance**: Which features matter most overall
-- **Local Explanations**: Why a specific prediction was made
-- **Dependence Plots**: How feature values affect predictions
-- **Interaction Effects**: How features work together
-
-## 🔧 Configuration
-
-Key settings in `src/config.py`:
-
-```python
-# Model parameters
-RANDOM_SEED = 42
-TEST_SIZE = 0.2
-CV_FOLDS = 5
-
-# Optuna tuning
-N_TRIALS = 100
-OPTUNA_TIMEOUT = 3600
-
-# Feature engineering
-IMPUTATION_STRATEGY = "median"
-SPATIAL_LAG_K_NEIGHBORS = 5
-```
-
-## 🤝 Contributing
-
-Contributions are welcome! Please:
-
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- **IRS Statistics of Income Division** for tax data
-- **U.S. Census Bureau** for demographic data
-- **HUD** for geographic crosswalks
-- **SHAP** team for interpretability tools
-
-## 📧 Contact
-
-For questions or feedback:
-- Create an issue on GitHub
-- Email: your.email@example.com
-
-## 🗺️ Roadmap
-
-- [ ] Add time series forecasting
-- [ ] Implement deep learning models
-- [ ] Add more geographic visualizations
-- [ ] Create API endpoint for predictions
-- [ ] Add automated data updates
-- [ ] Expand to international data
+**Vibhor** - [GitHub](https://github.com/Vibhor2702)
 
 ---
 
-**Built with ❤️ for transparent and explainable income prediction**
+**Built with ❤️ using XGBoost, Next.js, and Cloudflare**
