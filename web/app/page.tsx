@@ -260,16 +260,14 @@ export default function Home() {
                     The Stacked Ensemble model was trained on 27,680 ZIP codes with 95.01% accuracy (R² = 0.9501).
                   </p>
                 </div>
-              </div>
-            )}
 
-            {/* Visualizations */}
-            {visualizations && (
-              <div className="mt-8 pt-8 border-t-2 border-gray-200 space-y-6">
-                <h3 className="text-2xl font-bold text-gray-900 flex items-center">
-                  <BarChart3 className="mr-2" />
-                  Model Analysis & Insights
-                </h3>
+                {/* Visualizations - Now inside prediction block */}
+                {visualizations && (
+                  <div className="mt-8 pt-8 border-t-2 border-gray-200 space-y-6">
+                    <h3 className="text-2xl font-bold text-gray-900 flex items-center">
+                      <BarChart3 className="mr-2" />
+                      Model Analysis & Insights
+                    </h3>
 
                 {/* Model Comparison */}
                 <div className="bg-white border-2 border-gray-200 rounded-lg p-6">
@@ -436,6 +434,8 @@ export default function Home() {
                     </p>
                   </div>
                 </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
