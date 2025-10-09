@@ -140,7 +140,7 @@ MODEL_NAMES: List[str] = [
 # ============================================================================
 
 # Target variable from IRS data
-TARGET_VARIABLE = "avg_agi_per_return"
+TARGET_VARIABLE = "avg_agi"
 
 # Columns to scale (numeric features)
 NUMERIC_FEATURES_TO_SCALE: List[str] = [

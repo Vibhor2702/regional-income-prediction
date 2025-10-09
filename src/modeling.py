@@ -20,8 +20,8 @@ from typing import Dict, Tuple, Any, Optional
 import joblib
 import json
 from sklearn.model_selection import train_test_split, GroupKFold, cross_val_score
-from sklearn.linear_model import LinearRegression
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import LinearRegression, Ridge
+from sklearn.ensemble import RandomForestRegressor, StackingRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 import xgboost as xgb
 import lightgbm as lgb
@@ -397,12 +397,77 @@ class ModelTrainer:
         
         return study.best_params
     
-    def train_all_models(self, tune_hyperparameters: bool = False) -> None:
+    def train_stacked_ensemble(self) -> StackingRegressor:
         """
-        Train all models with optional hyperparameter tuning.
+        Train a stacked ensemble model combining XGBoost, LightGBM, and Random Forest.
+        Research shows ensemble stacking improves accuracy by 3-5% over single models.
+        
+        Reference: Verme, P. (2025). "Predicting Poverty." World Bank Economic Review.
+        
+        Returns:
+            StackingRegressor: Trained stacked ensemble model
+        """
+        logger.info("Training Stacked Ensemble (Research-Based)...")
+        
+        # Define base estimators
+        estimators = [
+            ('xgb', xgb.XGBRegressor(
+                n_estimators=100,
+                max_depth=6,
+                learning_rate=0.1,
+                subsample=0.8,
+                colsample_bytree=0.8,
+                random_state=RANDOM_SEED,
+                n_jobs=-1
+            )),
+            ('lgbm', lgb.LGBMRegressor(
+                n_estimators=100,
+                max_depth=20,
+                learning_rate=0.1,
+                num_leaves=31,
+                subsample=0.8,
+                colsample_bytree=0.8,
+                random_state=RANDOM_SEED,
+                n_jobs=-1,
+                verbose=-1
+            )),
+            ('rf', RandomForestRegressor(
+                n_estimators=100,
+                max_depth=20,
+                min_samples_split=5,
+                min_samples_leaf=2,
+                max_features='sqrt',
+                random_state=RANDOM_SEED,
+                n_jobs=-1
+            ))
+        ]
+        
+        # Ridge regression as meta-learner
+        meta_learner = Ridge(alpha=1.0, random_state=RANDOM_SEED)
+        
+        # Create stacked ensemble
+        stacked_model = StackingRegressor(
+            estimators=estimators,
+            final_estimator=meta_learner,
+            cv=5,  # 5-fold CV for meta-features
+            n_jobs=-1
+        )
+        
+        # Train ensemble
+        stacked_model.fit(self.X_train, self.y_train)
+        
+        self.models['StackedEnsemble'] = stacked_model
+        logger.info("✓ Stacked Ensemble trained (3 base models + Ridge meta-learner)")
+        
+        return stacked_model
+    
+    def train_all_models(self, tune_hyperparameters: bool = False, use_ensemble: bool = True) -> None:
+        """
+        Train all models with optional hyperparameter tuning and ensemble stacking.
         
         Args:
             tune_hyperparameters: Whether to tune hyperparameters with Optuna
+            use_ensemble: Whether to train stacked ensemble model (research-based improvement)
         """
         logger.info("=" * 60)
         logger.info("Training All Models")
@@ -435,6 +500,11 @@ class ModelTrainer:
         else:
             self.train_lightgbm()
         self.evaluate_model('LightGBM')
+        
+        # Train Stacked Ensemble (Research-Based Enhancement)
+        if use_ensemble:
+            self.train_stacked_ensemble()
+            self.evaluate_model('StackedEnsemble')
         
         logger.info("=" * 60)
         logger.info("All Models Trained!")

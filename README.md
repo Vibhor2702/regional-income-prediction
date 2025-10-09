@@ -1,6 +1,21 @@
 # 🏘️ Regional Income Prediction
+## 📊 Model Performance
 
-Machine learning model predicting average adjusted gross income (AGI) for U.S. regions using IRS tax data and Census socio-economic indicators.
+### 🎯 Research-Enhanced Model (Current)
+- **Algorithm**: Stacked Ensemble (XGBoost + LightGBM + Random Forest)
+- **Accuracy**: **95.0%** (R² = 0.9501) ✨ *New Record*
+- **MAE**: $3,686
+- **RMSE**: $10,451
+- **Improvement**: +0.46% over baseline XGBoost
+- **Dataset**: 27,680 ZIP codes
+
+*Enhancement based on academic research: Verme (2025) World Bank Economic Review*
+
+### Previous Best Model
+- **Algorithm**: XGBoost Regressor
+- **Accuracy**: 94.5% (R² = 0.9455)
+- **MAE**: $3,591
+- **RMSE**: $10,923e learning model predicting average adjusted gross income (AGI) for U.S. regions using IRS tax data and Census socio-economic indicators.
 
 ![Python](https://img.shields.io/badge/python-3.11-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)

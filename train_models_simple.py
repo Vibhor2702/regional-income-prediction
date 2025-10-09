@@ -9,8 +9,8 @@ import pandas as pd
 import joblib
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import LinearRegression
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import LinearRegression, Ridge
+from sklearn.ensemble import RandomForestRegressor, StackingRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 import xgboost as xgb
 import lightgbm as lgb
@@ -155,6 +155,51 @@ r2_lgb = r2_score(y_test, y_pred_lgb)
 models['lightgbm'] = lgb_model
 results.append(('LightGBM', mae_lgb, rmse_lgb, r2_lgb))
 print(f"  MAE: ${mae_lgb:,.2f}  |  RMSE: ${rmse_lgb:,.2f}  |  R²: {r2_lgb:.4f}")
+
+# 5. Stacked Ensemble (Research-Based Enhancement)
+print("Training Stacked Ensemble (Research-Based)...")
+estimators = [
+    ('xgb', xgb.XGBRegressor(
+        n_estimators=100,
+        max_depth=6,
+        learning_rate=0.1,
+        random_state=RANDOM_SEED,
+        n_jobs=-1,
+        verbosity=0
+    )),
+    ('lgbm', lgb.LGBMRegressor(
+        n_estimators=100,
+        max_depth=6,
+        learning_rate=0.1,
+        random_state=RANDOM_SEED,
+        n_jobs=-1,
+        verbosity=-1
+    )),
+    ('rf', RandomForestRegressor(
+        n_estimators=100,
+        max_depth=15,
+        min_samples_split=10,
+        random_state=RANDOM_SEED,
+        n_jobs=-1
+    ))
+]
+
+meta_learner = Ridge(alpha=1.0, random_state=RANDOM_SEED)
+stacked_model = StackingRegressor(
+    estimators=estimators,
+    final_estimator=meta_learner,
+    cv=5,
+    n_jobs=-1
+)
+stacked_model.fit(X_train, y_train)
+y_pred_stacked = stacked_model.predict(X_test)
+mae_stacked = mean_absolute_error(y_test, y_pred_stacked)
+rmse_stacked = np.sqrt(mean_squared_error(y_test, y_pred_stacked))
+r2_stacked = r2_score(y_test, y_pred_stacked)
+models['stacked_ensemble'] = stacked_model
+results.append(('Stacked Ensemble', mae_stacked, rmse_stacked, r2_stacked))
+print(f"  MAE: ${mae_stacked:,.2f}  |  RMSE: ${rmse_stacked:,.2f}  |  R²: {r2_stacked:.4f}")
+print(f"  (Combines XGBoost + LightGBM + Random Forest)")
 print()
 
 # ==============================================================================
