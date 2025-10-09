@@ -19,15 +19,22 @@ export default function Home() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ zipcode }),
+        body: JSON.stringify({ zipCode: zipcode }),
       })
 
       const data = await response.json()
       
-      if (data.success) {
-        setPrediction(data.prediction)
+      if (response.ok && !data.error) {
+        // Transform API response to match expected format
+        setPrediction({
+          avgIncome: data.predictedIncome,
+          confidence: Math.round(data.confidence * 100),
+          percentile: Math.round((data.predictedIncome / 65000) * 100), // Approximate percentile
+          nationalAvg: 65000, // US average
+          comparison: data.predictedIncome > 65000 ? 'above' : 'below'
+        })
       } else {
-        alert(data.error || 'Failed to get prediction')
+        alert(data.error || 'Failed to get prediction. Try: 10001, 90001, 60601, 77001, 33109, 94027')
       }
     } catch (error) {
       console.error('Prediction error:', error)
