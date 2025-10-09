@@ -58,10 +58,9 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
       );
     }
 
-    // Simple prediction logic based on median income
+    // Simple prediction logic based on median income (fixed, no randomness)
     const basePrediction = zipData.medianIncome;
-    const variance = basePrediction * 0.1; // 10% variance
-    const predictedIncome = Math.round(basePrediction + (Math.random() - 0.5) * variance);
+    const predictedIncome = basePrediction; // Consistent prediction
     
     // Calculate confidence (higher for more populated areas)
     const confidence = Math.min(0.95, 0.75 + (zipData.population / 100000) * 0.2);

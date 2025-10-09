@@ -70,30 +70,25 @@ export default function Home() {
           comparison: data.predictedIncome > 65000 ? 'above' : 'below'
         })
 
-        // Fetch visualization data
-        try {
-          const vizResponse = await fetch('/api/visualize', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ zipCode: zipcode }),
-          })
+        // ALWAYS set visualizations (using generated data for now)
+        console.log('Setting visualizations for income:', data.predictedIncome)
+        setVisualizations(generateMockVisualizations(data.predictedIncome))
 
-          const vizData = await vizResponse.json()
-          console.log('Visualization data:', vizData) // Debug log
-          if (vizResponse.ok && vizData.success) {
-            setVisualizations(vizData.visualizations)
-          } else {
-            console.error('Viz API error:', vizData)
-            // Set default visualizations for demo
-            setVisualizations(generateMockVisualizations(data.predictedIncome))
-          }
-        } catch (vizError) {
-          console.error('Viz fetch error:', vizError)
-          // Set default visualizations for demo
-          setVisualizations(generateMockVisualizations(data.predictedIncome))
-        }
+        // Optionally try to fetch from API (but don't block on it)
+        fetch('/api/visualize', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ zipCode: zipcode }),
+        }).then(vizResponse => vizResponse.json())
+          .then(vizData => {
+            console.log('Visualization API response:', vizData)
+            if (vizData.success) {
+              setVisualizations(vizData.visualizations)
+            }
+          })
+          .catch(err => console.log('Viz API not available, using generated data:', err))
       } else {
         alert(data.error || 'Failed to get prediction. Try: 10001, 90001, 60601, 77001, 33109, 94027')
         setPrediction(null)
