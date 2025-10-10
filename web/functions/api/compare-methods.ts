@@ -67,11 +67,12 @@ interface ComparisonResponse {
  */
 async function fetchMethodPrediction(
   method: 'traditional' | 'ml' | 'hybrid',
-  zipCode: string
+  zipCode: string,
+  baseUrl: string
 ): Promise<{ data: any; timeMs: number }> {
   const startTime = performance.now();
   
-  const endpoint = `/api/predict-${method}`;
+  const endpoint = `${baseUrl}/api/predict-${method}`;
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -177,11 +178,15 @@ export async function onRequestPost(context: any): Promise<Response> {
       );
     }
 
+    // Get base URL from request
+    const url = new URL(context.request.url);
+    const baseUrl = `${url.protocol}//${url.host}`;
+
     // Fetch all predictions in parallel
     const [traditionalResult, mlResult, hybridResult] = await Promise.all([
-      fetchMethodPrediction('traditional', zipCode),
-      fetchMethodPrediction('ml', zipCode),
-      fetchMethodPrediction('hybrid', zipCode)
+      fetchMethodPrediction('traditional', zipCode, baseUrl),
+      fetchMethodPrediction('ml', zipCode, baseUrl),
+      fetchMethodPrediction('hybrid', zipCode, baseUrl)
     ]);
 
     // Extract predictions

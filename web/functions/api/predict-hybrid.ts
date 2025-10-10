@@ -42,8 +42,8 @@ interface HybridPrediction {
 /**
  * Fetch prediction from Traditional Statistical Model
  */
-async function fetchTraditionalPrediction(zipCode: string): Promise<any> {
-  const response = await fetch(`/api/predict-traditional`, {
+async function fetchTraditionalPrediction(zipCode: string, baseUrl: string): Promise<any> {
+  const response = await fetch(`${baseUrl}/api/predict-traditional`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ zipCode })
@@ -60,8 +60,8 @@ async function fetchTraditionalPrediction(zipCode: string): Promise<any> {
 /**
  * Fetch prediction from Pure ML Model
  */
-async function fetchMLPrediction(zipCode: string): Promise<any> {
-  const response = await fetch(`/api/predict-ml`, {
+async function fetchMLPrediction(zipCode: string, baseUrl: string): Promise<any> {
+  const response = await fetch(`${baseUrl}/api/predict-ml`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ zipCode })
@@ -161,10 +161,14 @@ export async function onRequestPost(context: any): Promise<Response> {
       );
     }
 
+    // Get base URL from request
+    const url = new URL(context.request.url);
+    const baseUrl = `${url.protocol}//${url.host}`;
+
     // Fetch predictions from both models (in parallel for speed)
     const [traditionalPrediction, mlPrediction] = await Promise.all([
-      fetchTraditionalPrediction(zipCode),
-      fetchMLPrediction(zipCode)
+      fetchTraditionalPrediction(zipCode, baseUrl),
+      fetchMLPrediction(zipCode, baseUrl)
     ]);
 
     // Calculate hybrid prediction
