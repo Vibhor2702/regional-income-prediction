@@ -1,7 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Calculator, TrendingUp, DollarSign, FileText, BarChart3, MapPin, Award } from 'lucide-react'
+import { Calculator, TrendingUp, DollarSign, FileText, BarChart3, MapPin, Award, GitCompare, Zap, Brain, LineChart } from 'lucide-react'
+
+type PredictionMethod = 'traditional' | 'ml' | 'hybrid' | 'compare'
 
 // Helper function to generate mock visualizations
 const generateMockVisualizations = (income: number) => {
@@ -40,65 +42,77 @@ const generateMockVisualizations = (income: number) => {
 
 export default function Home() {
   const [zipcode, setZipcode] = useState('')
+  const [selectedMethod, setSelectedMethod] = useState<PredictionMethod>('hybrid')
   const [prediction, setPrediction] = useState<any>(null)
+  const [comparison, setComparison] = useState<any>(null)
   const [visualizations, setVisualizations] = useState<any>(null)
   const [loading, setLoading] = useState(false)
 
   const handlePredict = async () => {
     setLoading(true)
-    try {
-      // Call Cloudflare Worker API for prediction
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api/predict'
-      
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ zipCode: zipcode }),
-      })
+    setPrediction(null)
+    setComparison(null)
+    setVisualizations(null)
 
-      const data = await response.json()
-      
-      if (response.ok && !data.error) {
-        // Transform API response to match expected format
-        setPrediction({
-          avgIncome: data.predictedIncome,
-          confidence: Math.round(data.confidence * 100),
-          percentile: Math.round((data.predictedIncome / 65000) * 100),
-          nationalAvg: 65000,
-          comparison: data.predictedIncome > 65000 ? 'above' : 'below'
+    try {
+      if (selectedMethod === 'compare') {
+        // Compare all 3 methods
+        const response = await fetch('/api/compare-methods', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ zipCode: zipcode }),
         })
 
-        // ALWAYS set visualizations (using generated data for now)
-        console.log('Setting visualizations for income:', data.predictedIncome)
-        setVisualizations(generateMockVisualizations(data.predictedIncome))
-
-        // Optionally try to fetch from API (but don't block on it)
-        fetch('/api/visualize', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ zipCode: zipcode }),
-        }).then(vizResponse => vizResponse.json())
-          .then(vizData => {
-            console.log('Visualization API response:', vizData)
-            if (vizData.success) {
-              setVisualizations(vizData.visualizations)
-            }
+        const result = await response.json()
+        
+        if (response.ok && result.success) {
+          setComparison(result.data)
+          
+          // Set visualizations for comparison view
+          setVisualizations({
+            methodComparison: result.data.charts.methodComparison,
+            confidenceComparison: result.data.charts.confidenceComparison,
+            agreementVisualization: result.data.charts.agreementVisualization,
+            statistics: result.data.comparison
           })
-          .catch(err => console.log('Viz API not available, using generated data:', err))
+        } else {
+          alert(result.error || 'Comparison failed. Try: 10001, 90001, 60601, 77001, 33109, 94027')
+        }
       } else {
-        alert(data.error || 'Failed to get prediction. Try: 10001, 90001, 60601, 77001, 33109, 94027')
-        setPrediction(null)
-        setVisualizations(null)
+        // Single method prediction
+        const endpoint = `/api/predict-${selectedMethod}`
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ zipCode: zipcode }),
+        })
+
+        const result = await response.json()
+        
+        if (response.ok && result.success) {
+          const data = result.data
+          
+          // Transform API response to match expected format
+          setPrediction({
+            avgIncome: data.predictedIncome,
+            confidence: Math.round(data.confidence * 100),
+            percentile: Math.round((data.predictedIncome / 65000) * 100),
+            nationalAvg: 65000,
+            comparison: data.predictedIncome > 65000 ? 'above' : 'below',
+            methodology: data.methodology,
+            components: data.components || null,
+            explanation: data.explanation || null
+          })
+
+          // Generate visualizations
+          setVisualizations(generateMockVisualizations(data.predictedIncome))
+        } else {
+          alert(result.error || 'Prediction failed. Try: 10001, 90001, 60601, 77001, 33109, 94027')
+        }
       }
     } catch (error) {
       console.error('Prediction error:', error)
-      alert('Failed to connect to prediction API')
-      setPrediction(null)
-      setVisualizations(null)
+      alert('Failed to connect to prediction API. The APIs may still be deploying on Cloudflare.')
     } finally {
       setLoading(false)
     }
@@ -160,6 +174,85 @@ export default function Home() {
 
             {/* Input Form */}
             <div className="space-y-6">
+              {/* Method Selector */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                  <Brain className="inline mr-1 h-4 w-4" />
+                  Prediction Method
+                </label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <button
+                    onClick={() => setSelectedMethod('traditional')}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      selectedMethod === 'traditional'
+                        ? 'border-tax-blue bg-tax-blue text-white shadow-lg'
+                        : 'border-gray-300 bg-white text-gray-700 hover:border-tax-blue'
+                    }`}
+                  >
+                    <FileText className="h-6 w-6 mx-auto mb-2" />
+                    <div className="text-sm font-bold">Traditional</div>
+                    <div className="text-xs mt-1 opacity-80">Statistical</div>
+                  </button>
+                  
+                  <button
+                    onClick={() => setSelectedMethod('ml')}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      selectedMethod === 'ml'
+                        ? 'border-tax-green bg-tax-green text-white shadow-lg'
+                        : 'border-gray-300 bg-white text-gray-700 hover:border-tax-green'
+                    }`}
+                  >
+                    <Zap className="h-6 w-6 mx-auto mb-2" />
+                    <div className="text-sm font-bold">Pure ML</div>
+                    <div className="text-xs mt-1 opacity-80">95.01% Acc</div>
+                  </button>
+                  
+                  <button
+                    onClick={() => setSelectedMethod('hybrid')}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      selectedMethod === 'hybrid'
+                        ? 'border-tax-gold bg-tax-gold text-white shadow-lg'
+                        : 'border-gray-300 bg-white text-gray-700 hover:border-tax-gold'
+                    }`}
+                  >
+                    <LineChart className="h-6 w-6 mx-auto mb-2" />
+                    <div className="text-sm font-bold">Hybrid</div>
+                    <div className="text-xs mt-1 opacity-80">Best of Both</div>
+                  </button>
+                  
+                  <button
+                    onClick={() => setSelectedMethod('compare')}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      selectedMethod === 'compare'
+                        ? 'border-purple-600 bg-purple-600 text-white shadow-lg'
+                        : 'border-gray-300 bg-white text-gray-700 hover:border-purple-600'
+                    }`}
+                  >
+                    <GitCompare className="h-6 w-6 mx-auto mb-2" />
+                    <div className="text-sm font-bold">Compare All</div>
+                    <div className="text-xs mt-1 opacity-80">3 Methods</div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Method Description */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-900">
+                  {selectedMethod === 'traditional' && (
+                    <><strong>Traditional Statistical:</strong> Uses econometric formulas (base income × COL × education × unemployment). 100% deterministic, highly explainable. Based on Jenkins (2000) and Ibragimov (2009) research.</>
+                  )}
+                  {selectedMethod === 'ml' && (
+                    <><strong>Pure ML Model:</strong> Stacked Ensemble (XGBoost + LightGBM + Random Forest) achieving 95.01% accuracy. Fast inference, excellent at capturing non-linear patterns in IRS data.</>
+                  )}
+                  {selectedMethod === 'hybrid' && (
+                    <><strong>Hybrid Model:</strong> Weighted combination (60% ML + 40% Traditional). Best of both worlds - high accuracy + explainability. Confidence penalty if methods disagree by more than 20%.</>
+                  )}
+                  {selectedMethod === 'compare' && (
+                    <><strong>Compare All Methods:</strong> See predictions from all 3 approaches side-by-side with agreement analysis, variance statistics, and recommendation engine.</>
+                  )}
+                </p>
+              </div>
+
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   <MapPin className="inline mr-1 h-4 w-4" />
@@ -188,11 +281,209 @@ export default function Home() {
                 ) : (
                   <>
                     <Calculator className="h-5 w-5" />
-                    <span>Calculate Income Prediction</span>
+                    <span>
+                      {selectedMethod === 'compare' ? 'Compare All 3 Methods' : `Calculate ${selectedMethod === 'traditional' ? 'Traditional' : selectedMethod === 'ml' ? 'ML' : 'Hybrid'} Prediction`}
+                    </span>
                   </>
                 )}
               </button>
             </div>
+
+            {/* Comparison Results */}
+            {comparison && (
+              <div className="mt-8 pt-8 border-t-2 border-gray-200">
+                <div className="bg-gradient-to-r from-purple-600 to-purple-800 text-white rounded-xl p-6 shadow-lg mb-6">
+                  <h3 className="text-2xl font-bold mb-2">3-Method Comparison Results</h3>
+                  <p className="text-purple-200">
+                    Analyzing ZIP Code <span className="font-mono font-bold text-white">{zipcode}</span> ({comparison.state}) with all prediction approaches
+                  </p>
+                </div>
+
+                {/* Method Predictions Grid */}
+                <div className="grid md:grid-cols-3 gap-6 mb-6">
+                  <div className="bg-white border-2 border-tax-blue rounded-xl p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <FileText className="h-8 w-8 text-tax-blue" />
+                      <span className="text-sm font-bold text-tax-blue bg-tax-blue/10 px-3 py-1 rounded-full">
+                        Traditional
+                      </span>
+                    </div>
+                    <p className="text-3xl font-bold text-gray-900 mb-2">
+                      ${comparison.methods.traditional.income.toLocaleString()}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      Confidence: <span className="font-bold text-tax-blue">{(comparison.methods.traditional.confidence * 100).toFixed(1)}%</span>
+                    </p>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Econometric formulas • {comparison.methods.traditional.timeMs}ms
+                    </p>
+                  </div>
+
+                  <div className="bg-white border-2 border-tax-green rounded-xl p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <Zap className="h-8 w-8 text-tax-green" />
+                      <span className="text-sm font-bold text-tax-green bg-tax-green/10 px-3 py-1 rounded-full">
+                        Pure ML
+                      </span>
+                    </div>
+                    <p className="text-3xl font-bold text-gray-900 mb-2">
+                      ${comparison.methods.ml.income.toLocaleString()}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      Confidence: <span className="font-bold text-tax-green">{(comparison.methods.ml.confidence * 100).toFixed(1)}%</span>
+                    </p>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Stacked Ensemble • {comparison.methods.ml.timeMs}ms
+                    </p>
+                  </div>
+
+                  <div className="bg-white border-2 border-tax-gold rounded-xl p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <LineChart className="h-8 w-8 text-tax-gold" />
+                      <span className="text-sm font-bold text-tax-gold bg-tax-gold/10 px-3 py-1 rounded-full">
+                        Hybrid
+                      </span>
+                    </div>
+                    <p className="text-3xl font-bold text-gray-900 mb-2">
+                      ${comparison.methods.hybrid.income.toLocaleString()}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      Confidence: <span className="font-bold text-tax-gold">{(comparison.methods.hybrid.confidence * 100).toFixed(1)}%</span>
+                    </p>
+                    <p className="text-xs text-gray-500 mt-2">
+                      60% ML + 40% Trad • {comparison.methods.hybrid.timeMs}ms
+                    </p>
+                  </div>
+                </div>
+
+                {/* Recommendation */}
+                <div className={`rounded-xl p-6 mb-6 border-2 ${
+                  comparison.comparison.recommended === 'traditional' ? 'bg-tax-blue/10 border-tax-blue' :
+                  comparison.comparison.recommended === 'ml' ? 'bg-tax-green/10 border-tax-green' :
+                  'bg-tax-gold/10 border-tax-gold'
+                }`}>
+                  <div className="flex items-start space-x-3">
+                    <Award className={`h-6 w-6 mt-1 ${
+                      comparison.comparison.recommended === 'traditional' ? 'text-tax-blue' :
+                      comparison.comparison.recommended === 'ml' ? 'text-tax-green' :
+                      'text-tax-gold'
+                    }`} />
+                    <div>
+                      <h4 className="font-bold text-gray-900 mb-2">
+                        Recommended: {comparison.comparison.recommended === 'traditional' ? 'Traditional Statistical' : comparison.comparison.recommended === 'ml' ? 'Pure ML' : 'Hybrid Model'}
+                      </h4>
+                      <p className="text-gray-700">{comparison.comparison.recommendationReason}</p>
+                      <div className="flex items-center space-x-4 mt-3 text-sm">
+                        <div className="bg-white px-3 py-1 rounded-full border">
+                          Agreement: <span className="font-bold">{comparison.comparison.agreement.toUpperCase()}</span>
+                        </div>
+                        <div className="bg-white px-3 py-1 rounded-full border">
+                          Spread: <span className="font-bold">${comparison.comparison.range.spread.toLocaleString()}</span>
+                        </div>
+                        <div className="bg-white px-3 py-1 rounded-full border">
+                          Std Dev: <span className="font-bold">${comparison.comparison.standardDeviation.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Comparison Charts */}
+                {visualizations && (
+                  <div className="space-y-6">
+                    {/* Method Comparison Bar Chart */}
+                    <div className="bg-white border-2 border-gray-200 rounded-lg p-6">
+                      <h4 className="font-bold text-gray-900 mb-4 flex items-center">
+                        <BarChart3 className="mr-2 h-5 w-5 text-purple-600" />
+                        Income Predictions by Method
+                      </h4>
+                      <div className="space-y-4">
+                        {visualizations.methodComparison.map((item: any, idx: number) => {
+                          const maxIncome = Math.max(...visualizations.methodComparison.map((m: any) => m.income))
+                          const barWidth = (item.income / maxIncome) * 100
+                          const colors = ['#002147', '#10b981', '#f59e0b']
+                          
+                          return (
+                            <div key={idx} className="space-y-1">
+                              <div className="flex justify-between text-sm">
+                                <span className="font-medium text-gray-700">{item.method}</span>
+                                <span className="font-mono font-bold text-gray-900">
+                                  ${item.income.toLocaleString()}
+                                </span>
+                              </div>
+                              <div className="relative h-10 bg-gray-100 rounded-lg overflow-hidden">
+                                <div 
+                                  className="absolute top-0 left-0 h-full transition-all duration-500 flex items-center justify-end px-4"
+                                  style={{ 
+                                    width: `${barWidth}%`,
+                                    backgroundColor: colors[idx]
+                                  }}
+                                >
+                                  <span className="text-white text-sm font-bold">
+                                    {(item.confidence * 100).toFixed(1)}%
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Confidence Comparison */}
+                    <div className="bg-white border-2 border-gray-200 rounded-lg p-6">
+                      <h4 className="font-bold text-gray-900 mb-4">Confidence Score Comparison</h4>
+                      <div className="grid grid-cols-3 gap-4">
+                        {visualizations.confidenceComparison.map((item: any, idx: number) => (
+                          <div key={idx} className="text-center p-4 bg-gray-50 rounded-lg">
+                            <p className="text-sm text-gray-600 mb-2">{item.method}</p>
+                            <p className="text-3xl font-bold text-gray-900">
+                              {(item.confidence * 100).toFixed(1)}%
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Agreement Visualization */}
+                    <div className="bg-white border-2 border-gray-200 rounded-lg p-6">
+                      <h4 className="font-bold text-gray-900 mb-4">Agreement Analysis (Deviation from Mean)</h4>
+                      <div className="space-y-3">
+                        {visualizations.agreementVisualization.map((item: any, idx: number) => {
+                          const maxDeviation = Math.max(...visualizations.agreementVisualization.map((a: any) => a.deviation))
+                          const barWidth = maxDeviation > 0 ? (item.deviation / maxDeviation) * 100 : 0
+                          const colors = ['#002147', '#10b981', '#f59e0b']
+                          
+                          return (
+                            <div key={idx} className="space-y-1">
+                              <div className="flex justify-between text-sm">
+                                <span className="font-medium text-gray-700">{item.method}</span>
+                                <span className="font-bold text-gray-900">
+                                  ±${Math.round(item.deviation).toLocaleString()}
+                                </span>
+                              </div>
+                              <div className="relative h-6 bg-gray-100 rounded-lg overflow-hidden">
+                                <div 
+                                  className="absolute top-0 left-0 h-full transition-all duration-500"
+                                  style={{ 
+                                    width: `${barWidth}%`,
+                                    backgroundColor: colors[idx],
+                                    opacity: 0.7
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-4">
+                        Lower deviation = closer to average of all 3 methods
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Results */}
             {prediction && (
