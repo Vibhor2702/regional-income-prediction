@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Calculator, TrendingUp, DollarSign, FileText, BarChart3, MapPin, Award, GitCompare, Zap, Brain, LineChart } from 'lucide-react'
+import { BarChart, Bar, PieChart, Pie, LineChart as RechartsLine, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts'
 
 type PredictionMethod = 'traditional' | 'ml' | 'hybrid' | 'compare'
 
@@ -258,14 +259,19 @@ export default function Home() {
                   <MapPin className="inline mr-1 h-4 w-4" />
                   ZIP Code
                 </label>
-                <input
-                  type="text"
+                <select
                   value={zipcode}
-                  onChange={(e) => setZipcode(e.target.value.replace(/\D/g, '').slice(0, 5))}
-                  placeholder="Enter 5-digit ZIP code (e.g., 10001)"
-                  className="tax-input w-full text-lg"
-                  maxLength={5}
-                />
+                  onChange={(e) => setZipcode(e.target.value)}
+                  className="tax-input w-full text-lg cursor-pointer"
+                >
+                  <option value="">Select a ZIP code...</option>
+                  <option value="10001">10001 - New York, NY (Manhattan)</option>
+                  <option value="90001">90001 - Los Angeles, CA (South LA)</option>
+                  <option value="60601">60601 - Chicago, IL (Loop)</option>
+                  <option value="77001">77001 - Houston, TX (Downtown)</option>
+                  <option value="33109">33109 - Miami Beach, FL</option>
+                  <option value="94027">94027 - Atherton, CA (Silicon Valley)</option>
+                </select>
               </div>
 
               <button
@@ -566,6 +572,27 @@ export default function Home() {
                     <Award className="mr-2 h-5 w-5 text-tax-gold" />
                     Model Comparison - All 5 Models
                   </h4>
+                  
+                  {/* Recharts Bar Chart */}
+                  <div className="h-64 mb-6">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={visualizations.modelComparison.labels.map((label: string, idx: number) => ({
+                        name: label,
+                        income: Math.round(visualizations.modelComparison.predictions[idx]),
+                        accuracy: visualizations.modelComparison.accuracy[idx]
+                      }))}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" angle={-15} textAnchor="end" height={80} style={{ fontSize: '12px' }} />
+                        <YAxis yAxisId="left" orientation="left" stroke="#10b981" label={{ value: 'Income ($)', angle: -90, position: 'insideLeft' }} />
+                        <YAxis yAxisId="right" orientation="right" stroke="#3b82f6" label={{ value: 'Accuracy (%)', angle: 90, position: 'insideRight' }} />
+                        <Tooltip formatter={(value: number) => value.toLocaleString()} />
+                        <Legend />
+                        <Bar yAxisId="left" dataKey="income" fill="#10b981" name="Predicted Income ($)" />
+                        <Bar yAxisId="right" dataKey="accuracy" fill="#3b82f6" name="Model Accuracy (%)" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+
                   <div className="space-y-3">
                     {visualizations.modelComparison.labels.map((label: string, idx: number) => {
                       const prediction = visualizations.modelComparison.predictions[idx]
@@ -608,6 +635,33 @@ export default function Home() {
                 {/* Feature Importance */}
                 <div className="bg-white border-2 border-gray-200 rounded-lg p-6">
                   <h4 className="font-bold text-gray-900 mb-4">Feature Importance - What Drives This Prediction?</h4>
+                  
+                  {/* Pie Chart for Feature Importance */}
+                  <div className="h-80 mb-6">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={visualizations.featureImportance.labels.map((label: string, idx: number) => ({
+                            name: label,
+                            value: visualizations.featureImportance.values[idx] * 100
+                          }))}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={(entry: any) => `${entry.name}: ${entry.value.toFixed(1)}%`}
+                          outerRadius={100}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {visualizations.featureImportance.labels.map((entry: string, idx: number) => (
+                            <Cell key={`cell-${idx}`} fill={visualizations.featureImportance.colors[idx]} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value: number) => `${value.toFixed(1)}%`} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+
                   <div className="space-y-3">
                     {visualizations.featureImportance.labels.map((label: string, idx: number) => {
                       const value = visualizations.featureImportance.values[idx]
