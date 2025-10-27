@@ -115,46 +115,59 @@ function generateRecommendation(
   hybrid: MethodResult,
   agreement: 'high' | 'medium' | 'low'
 ): { recommended: 'traditional' | 'ml' | 'hybrid'; reason: string } {
-  // If high agreement, recommend hybrid (best of both worlds)
+  // Hybrid is preferred if its confidence is competitive (within 2% of best)
+  const maxConfidence = Math.max(
+    traditional.confidence,
+    ml.confidence,
+    hybrid.confidence
+  );
+  
+  const confidenceThreshold = 0.02; // 2% threshold
+  
+  // If high agreement, always recommend hybrid (ensemble advantage)
   if (agreement === 'high') {
     return {
       recommended: 'hybrid',
-      reason: 'All methods agree closely. Hybrid combines the best of both approaches with highest confidence.'
+      reason: 'All methods agree closely. Hybrid combines strengths of both approaches with ensemble reliability.'
     };
   }
 
-  // If medium agreement, prioritize by confidence
-  if (agreement === 'medium') {
-    const maxConfidence = Math.max(
-      traditional.confidence,
-      ml.confidence,
-      hybrid.confidence
-    );
+  // If Hybrid has highest confidence, recommend it
+  if (hybrid.confidence === maxConfidence) {
+    return {
+      recommended: 'hybrid',
+      reason: `Hybrid achieves highest confidence (${(hybrid.confidence * 100).toFixed(1)}%) through intelligent ensemble weighting.`
+    };
+  }
 
-    if (hybrid.confidence === maxConfidence) {
-      return {
-        recommended: 'hybrid',
-        reason: 'Moderate agreement between methods. Hybrid balances accuracy and explainability.'
-      };
-    }
+  // If Hybrid is within 2% of highest confidence, still recommend it (research: ensemble reduces variance)
+  if (maxConfidence - hybrid.confidence <= confidenceThreshold) {
+    return {
+      recommended: 'hybrid',
+      reason: 'Hybrid confidence competitive with best single model. Ensemble approach provides superior robustness and reliability (Verme 2025).'
+    };
+  }
 
-    if (ml.confidence === maxConfidence) {
-      return {
-        recommended: 'ml',
-        reason: 'ML model has highest confidence with 95.01% historical accuracy on IRS data.'
-      };
-    }
+  // If medium agreement and ML clearly dominates, recommend ML
+  if (agreement === 'medium' && ml.confidence === maxConfidence && ml.confidence - traditional.confidence > 0.03) {
+    return {
+      recommended: 'ml',
+      reason: 'ML model has significantly higher confidence with 95.01% historical accuracy on IRS data.'
+    };
+  }
 
+  // If medium agreement and Traditional clearly dominates, recommend Traditional
+  if (agreement === 'medium' && traditional.confidence === maxConfidence && traditional.confidence - ml.confidence > 0.03) {
     return {
       recommended: 'traditional',
-      reason: 'Traditional model provides stable, explainable predictions with high confidence.'
+      reason: 'Traditional model provides stable, explainable predictions with highest confidence in this case.'
     };
   }
 
-  // Low agreement - recommend traditional for safety
+  // Low agreement - recommend hybrid as it balances both views
   return {
-    recommended: 'traditional',
-    reason: 'Methods disagree significantly. Traditional model provides most explainable and stable prediction.'
+    recommended: 'hybrid',
+    reason: 'Methods disagree. Hybrid intelligently balances both approaches for most reliable prediction.'
   };
 }
 
